@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MOD Anniversary 2025 — Interactive Book (v12.1)</title>
+  <style>
+    :root{
+      --paper:#f7f0d8;           /* kremowe tło/papier */
+      --cover:#0b1318;           /* kolor okładki */
+      --ink:#111;
+      --accent:#0b1318;          /* pasek postępu / akcent = kolor okładki */
+      --pagePad:22px;
+    }
+    *{ box-sizing:border-box }
+    body{
+      margin:0; font-family:Calibri, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height:100svh; color:var(--ink);
+      background:var(--paper);
+      display:flex; align-items:center; justify-content:center; padding:16px;
+    }
+    .wrap{ width:100%; display:flex; flex-direction:column; align-items:center; }
+
+    /* Top controls */
+    .controls{ display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:12px; }
+    button{ background:var(--cover); border:none; color:#fff; padding:10px 16px; border-radius:10px; cursor:pointer; }
+    button:hover{ background:#13202a; }
+
+    /* ===== BOOK (A–Z + cover) ===== */
+    .book{ position:relative; width:min(1320px,96vw); aspect-ratio:16/10; border-radius:28px; overflow:hidden; }
+    .bg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; color:var(--paper); }
+    .page{ position:absolute; inset:0; display:grid; grid-template-columns:1fr 1fr; opacity:0; transform:perspective(1000px) rotateY(-14deg) scale(.985); }
+    .page.ready{ opacity:1; transform:none; transition: opacity .45s ease, transform .45s ease; }
+
+    .left, .right{ padding:var(--pagePad); }
+    .left{
+      position:relative; display:flex; align-items:center; justify-content:center;
+      padding:var(--pagePad); overflow:hidden; min-height:0; min-width:0;
+    }
+    /* NO-CROP images on the left page */
+    .left img{
+      display:block; width:auto; height:auto; max-width:100%; max-height:100%;
+      object-fit:contain; margin:auto; border-radius:8px;
+    }
+
+    .right{
+      color:#111; display:flex; align-items:center; justify-content:center;
+      /* +10px więcej od prawej */
+      padding-right: calc(var(--pagePad) + 10px);
+    }
+    .content{ width:min(680px,100%); }
+    .letter{ font-weight:800; font-size:clamp(42px,7vw,80px); line-height:1; opacity:.95; margin:0 0 6px; letter-spacing:2px; color:#333; }
+    h2{ margin:0 0 10px; font-weight:700; font-size:clamp(18px,2.6vw,26px); letter-spacing:.3px; color:#111; }
+    #caption{ font-size:clamp(14px,2.2vw,18px); line-height:1.65; white-space:pre-wrap; min-height:3.2em; text-align:left; color:#333; }
+    .cursor{ display:inline-block; width:8px; height:1em; translate:0 .18em; background:#111; animation:blink 1s infinite; margin-left:3px; }
+    @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:.1} }
+
+    .progress{ height:8px; background:#e0d8cd; border-radius:999px; overflow:hidden; margin-top:12px; width:min(1320px,96vw); }
+    .progress>div{ height:100%; width:0; background:var(--accent); }
+    .counter{ opacity:.9; font-size:14px; margin:8px 0 6px; text-align:center; width:min(1320px,96vw); color:#333; }
+    .tips{ opacity:.85; font-size:12.5px; text-align:center; width:min(1320px,96vw); color:#333; }
+
+    @media (max-width: 880px){ .page{ grid-template-columns:1fr; } .left,.right{ padding:14px; } }
+
+    /* ===== COVER PAGE (single image) ===== */
+    .coverPage{ display:none; grid-template-columns:1fr; }
+    .coverSolo{
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--cover);
+    }
+    .coverSolo img{
+      max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;
+      border-radius:18px; box-shadow:0 18px 48px rgba(0,0,0,.45);
+    }
+
+    /* ===== FINAL FULL-SCREEN GALLERY PAGE ===== */
+    .final{ display:none; width:100%; min-height:calc(100svh - 120px); }
+    .finalInner{ width:min(1320px,96vw); aspect-ratio:16/10; margin:0 auto; position:relative; border-radius:28px; overflow:hidden;
+      background:linear-gradient(180deg,var(--cover), #0a0f14); box-shadow: 0 16px 40px rgba(0,0,0,.35), inset 0 0 0 3px rgba(255,255,255,.08);
+      display:flex; flex-direction:column; gap:1.2vmin; padding:clamp(14px,2.2vmin,24px); }
+    .finalTitle{ text-align:center; font-weight:900; letter-spacing:.03em; color:#ffd55a; text-shadow:0 2px 0 rgba(0,0,0,.35), 0 8px 28px rgba(255,213,90,.25); font-size:clamp(28px,5vw,52px); }
+    .finalSub{ text-align:center; color:rgba(255,255,255,.75); font-weight:600; letter-spacing:.12em; font-size:clamp(12px,1.6vw,16px); margin-top:-.3rem; }
+
+    .tank{ position:relative; flex:1; border-radius:22px; background:linear-gradient(to bottom, #4ec8f2, #1c6fa1);
+      border:12px solid rgba(255,255,255,.45); box-shadow: inset 0 40px 80px rgba(255,255,255,.15), inset 0 -20px 60px rgba(0,0,0,.25);
+      overflow:hidden; display:grid; grid-template-columns: repeat(auto-fit, minmax(clamp(90px,10vw,140px), 1fr));
+      align-content:start; gap:clamp(8px,1vw,14px); padding:clamp(10px,1.6vw,18px); }
+    .tank::before{ content:""; position:absolute; inset:0;
+      background: linear-gradient(120deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 35%) left top/60% 100% no-repeat,
+                  radial-gradient(150% 80% at 120% -10%, rgba(255,255,255,.15), rgba(255,255,255,0) 60%);
+      pointer-events:none; mix-blend-mode:screen; }
+
+    .fish{ width:100%; aspect-ratio:1/1; display:grid; place-items:center; background:transparent; border-radius:14px;
+      overflow:hidden; animation:float 6s ease-in-out infinite; }
+    .fish img{ width:100%; height:100%; object-fit:contain; background:transparent; }
+    @keyframes float{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-6px) } }
+    .fish:nth-child(3n){ animation-duration:7s } .fish:nth-child(4n){ animation-duration:5.6s } .fish:nth-child(5n){ animation-duration:6.6s }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="controls">
+      <button id="prev">◀ Previous</button>
+      <button id="auto">⏸ Pause</button>
+      <button id="next">Next ▶</button>
+    </div>
+
+    <!-- BOOK -->
+    <div class="book" id="book" title="Click left/right, use ←/→, Space toggles autoplay">
+      <!-- SVG book (cover color = --cover, pages fill = currentColor = paper) -->
+      <svg class="bg" id="bookBG" viewBox="0 0 1536 960" aria-hidden="true" style="color:var(--paper)">
+        <defs>
+          <linearGradient id="sh" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#000" stop-opacity=".35"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".15"/>
+          </linearGradient>
+          <linearGradient id="hingeLight" x1="768" y1="0" x2="768" y2="960" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#ffffff" stop-opacity=".25"/>
+            <stop offset="0.5" stop-color="#ffffff" stop-opacity=".12"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity=".2"/>
+          </linearGradient>
+          <linearGradient id="hingeShadow" x1="768" y1="0" x2="768" y2="960" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#000000" stop-opacity=".20"/>
+            <stop offset="0.5" stop-color="#000000" stop-opacity=".35"/>
+            <stop offset="1" stop-color="#000000" stop-opacity=".20"/>
+          </linearGradient>
+        </defs>
+        <rect x="8" y="8" width="1520" height="944" rx="36" fill="var(--cover)"/>
+        <rect x="8" y="8" width="1520" height="944" rx="36" fill="url(#sh)" opacity=".15"/>
+        <rect x="32" y="40" width="720" height="880" rx="22" fill="currentColor"/>
+        <rect x="784" y="40" width="720" height="880" rx="22" fill="currentColor"/>
+        <rect x="32" y="40" width="720" height="880" rx="22" fill="#000" opacity=".05"/>
+        <rect x="784" y="40" width="720" height="880" rx="22" fill="#000" opacity=".05"/>
+        <rect x="767" y="40" width="2" height="880" fill="url(#hingeLight)"/>
+        <rect x="760" y="40" width="7" height="880" fill="url(#hingeShadow)" opacity=".25"/>
+        <rect x="769" y="40" width="7" height="880" fill="url(#hingeShadow)" opacity=".18"/>
+      </svg>
+
+      <!-- Cover as first page: single full image -->
+      <div class="page coverPage" id="coverPage">
+        <div class="coverSolo">
+          <img src="Op.png" alt="Cover">
+        </div>
+      </div>
+
+      <!-- Normal page -->
+      <div class="page" id="page">
+        <div class="left"><img id="img" alt="Page" /></div>
+        <div class="right">
+          <div class="content">
+            <div id="letter" class="letter"></div>
+            <h2 id="title"></h2>
+            <div id="caption"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINAL FULL-SCREEN GALLERY PAGE (back) -->
+    <div class="final" id="final">
+      <div class="finalInner">
+        <div class="finalTitle">MOD Anniversary</div>
+        <div class="finalSub">Great Aquarium Edition</div>
+        <div class="tank" id="aquarium"></div>
+      </div>
+    </div>
+
+    <div class="progress"><div id="bar"></div></div>
+    <div class="counter"><span id="counter"></span></div>
+    <div class="tips">The book scrolls automatically. To read faster, click the sides or use the ←/→ arrow keys.</div>
+  </div>
+
+  <script>
+    // COVER + A–Z pages + GALLERY
+    const coverPage = { type:'cover' };
+
+    const azPages = [
+      { src: 'A.png', title: 'A — Anemona Queen of Souls', caption: 'A wandering jelly-queen who wants time to slow down; she curates unhurried, see-every-shore voyages and collects a grain of sand from each beach “for research.” If you ask to see the collection, you’ll get a 40-minute slideshow and three unsolicited travel hacks.' },
+      { src: 'B.png', title: 'B — Bearer of Sails', caption: 'A swordfish paladin turned sail-guardian; slices spam like seaweed and guards cozy reading coves. Travels with a broadsword-shaped bookmark and a strict policy: “No spoilers within 20 nautical miles.”' },
+      { src: 'C.png', title: 'C — Collector of Currents', caption: 'An octopus cartographer who pins every cove and maps every tide. Color-coded tentacles double as sticky notes; spends 10 minutes looking for a magnifying glass that’s already perched on her head.' },
+      { src: 'D.png', title: 'D — Daichi the Drift', caption: 'A steadfast reef turtle and team anchor. His shell doubles as a picnic table during calm seas; motto: “Slow is smooth, smooth is fast… and also snack time.”' },
+      { src: 'E.png', title: 'E — Emma the Electric', caption: 'An eel hype lead who recharges group adventures (and everyone’s phones) just by swimming past. Equally skilled at binge-watch itinerary planning and mid-ocean power naps.' },
+      { src: 'F.png', title: 'F — Ferryfish of the Ocean', caption: 'A ghostly manta nicknamed “Spooker”; ferries dead threads to the archive, then leaves a warm pep talk bobbing in his wake. His boat is named Absolutely Not A Ghost—which is exactly what a ghost would say.' },
+      { src: 'G.png', title: 'G — Grimshroud Sea', caption: 'A kraken caretaker who loves quiet, books, good food, and nature; conjures sea-mist with a “cozy mode” setting (includes hot-chocolate foam). Library cards in eight arms, overdue fees paid in seashells.' },
+      { src: 'H.png', title: 'H — Herald of the Waves', caption: 'A narwhal herald who rallies the pod with a horn blast and then tiptoes off to a silent cove. Claims the horn also boosts Wi-Fi; refuses to provide the password.' },
+      { src: 'I.png', title: 'I — Infinity Coral', caption: 'A deep-sea cloak-squid, literal walking mute-button. Hands out noise-canceling bubbles; when someone yells “Drama!” it morphs into a Nope-fish and glides away.' },
+      { src: 'J.png', title: 'J — Judge of the Deep', caption: 'A hammer-crab judge whose gavel is a recycled clam shell. Spooky-season ambassador, defender of friends, and undefeated champion of shotgunning kelp-ale; closing statement usually ends with “Sustained—vibes only.”' },
+      { src: 'K.png', title: 'K — Kaelen the Fierce', caption: 'Barracuda berserker in battles; IRL prefers safe grottoes, anime epics, and responsibility-light tides. Swears eternal oath against pineapple on pizza—case law pending in the Coral Court.' },
+      { src: 'L.png', title: 'L — Luna Surf', caption: 'Siren-archaeologist; kind and helpful, fluent in fossil lore, with a keen eye for undersea art. Pockets are full of ammonites and “absolutely necessary” brushes; insists fossils aren’t “old rocks,” they’re “prehistoric fan mail.”' },
+      { src: 'M.png', title: 'M — Mighty Eel', caption: 'A kelp stag turned slippery electric eel; charges through F/B squalls and shocks stampedes of crab-tickets into calm. Still insists “Shocklockmicrowave” was a perfectly normal name.' },
+      { src: 'N.png', title: 'N — Northern Narwhale', caption: 'Beluga songstress who hushes the tide with lo-fi whalesong and snow-soft lullabies. Makes wind chimes from sea-ice; ASMR level: glacier.' },
+      { src: 'O.png', title: 'O — Oasis of Fishfortune', caption: 'Tide-turning siren: first she recharges for weeks, then she builds dreams—business plan in one fin, book draft in the other. Also part-time pumpkin-to-carriage engineer and weekend wiki gremlin.' },
+      { src: 'P.png', title: 'P — Peace-Seal', caption: 'Monk-seal mediator who dives head-first (trial-and-error is a feature, not a bug). Settles disputes with a three-breath handshake and a tray of “de-escalation snacks.”' },
+      { src: 'Q.png', title: 'Q — Quinn Reefers', caption: 'River-dolphin navigator turned reef researcher; maintains a color-coded itinerary spreadsheet and a calendar event titled “Mandatory Island Sunset + Power Nap.”' },
+      { src: 'R.png', title: 'R — Rise of Fins', caption: 'A gentle archivist-mermaid who treasures old scrolls and weaves them into new content. Always smiling, always kind, and never forgets to leave a trail of neatly shelved seashell notes for others to follow. If you ask nicely, she’ll show you her “content reef” — part wiki, part coral art gallery' },
+      { src: 'S.png', title: 'S — Seablast Summoner', caption: 'Stormcaller for family-and-friends days; owns zero flip-flops, never b00lies, and treats bonfire popcorn like a sacred ritual. Surfboard is branded Shocklockmicrowave and yes, there’s a story.' },
+      { src: 'T.png', title: 'T — Tallie the Triton', caption: 'Princess of Modland; siren with a titanium smile—doesn’t grind at problems, she chews through them. Royal decree: crown every molar and floss your krill. 👑🦷' },
+      { src: 'U.png', title: 'U — The Undead Prawnce', caption: 'Lich seahorse with a skeleton-crab crew, now upgraded with shrimp puns. Roasts cheese over hydrothermal vents like it’s fondue night. Scary on purpose, comforting by accident.' },
+      { src: 'V.png', title: 'V — Voice of Sirens', caption: 'Hush-squid who drinks noise like black water and returns the sea to stillness. Sells out an Introvert-Only resort every season; keynote is just three glorious dots: “…”.' },
+      { src: 'W.png', title: 'W — Wraithtide Frost', caption: 'Biolum seahorse of few words and big results; drops star-shaped sticky notes (“You’ve got this ✨”), fixes morale with a glittering wake, vanishes before thank-yous land. Reef’s quiet miracle worker.' },
+      { src: 'X.png', title: 'X — Xyra the Buoy', caption: 'Wayfinding swordfish and living buoy: multilingual navigator who plays the Tar of Tides and collects sky-photos reflected in waves. Hosts Star-Map 101 at dusk; attendance guaranteed by dolphins.' },
+      { src: 'Y.png', title: 'Y — Young Gull', caption: 'Mysterious mewa warden with an irresistible laugh and a refined whisky palate. Terrifyingly competent; arrives three currents before trouble with a “Field Guide to Not Doing Dumb Stuff.”' },
+      { src: 'Z.png', title: 'Z — Zombiefish Destroyer', caption: 'A goofy zombie-fish legend who was already splashing around before the team even formed. Loves bananas (like, a lot 🍌), cracks jokes mid-tide, and somehow turns every raid into a comedy set. Known for arriving early, leaving glittery seaweed pranks, and still being everyone’s “undead original.”' },
+    ];
+
+    const pages = [coverPage, ...azPages, { type:'gallery' }];
+
+    const TYPING_MS_PER_CHAR = 22;
+    const READ_DELAY_MS = 4000;
+
+    let idx = 0, typingTimer = null, autoTimeout = null, isAuto = true;
+
+    const bookEl   = document.getElementById('book');
+    const bookBG   = document.getElementById('bookBG');
+    const pageEl   = document.getElementById('page');
+    const coverEl  = document.getElementById('coverPage');
+    const finalEl  = document.getElementById('final');
+
+    const img = document.getElementById('img');
+    const letterEl = document.getElementById('letter');
+    const titleEl  = document.getElementById('title');
+    const caption  = document.getElementById('caption');
+    const bar      = document.getElementById('bar');
+    const counter  = document.getElementById('counter');
+    const autoBtn  = document.getElementById('auto');
+
+    function splitTitle(t){
+      if(!t) return { letter:'', name:'' };
+      const parts = t.split('—');
+      if(parts.length>1){ const L = (parts[0].trim()[0]||'').toUpperCase(); const name = parts.slice(1).join('—').trim(); return { letter: L, name }; }
+      return { letter: (t.trim()[0]||'').toUpperCase(), name: t };
+    }
+
+    function typeText(text, onDone){
+      clearInterval(typingTimer);
+      caption.innerHTML = '<span></span><span class="cursor"></span>';
+      let i = 0;
+      typingTimer = setInterval(()=>{
+        caption.firstChild.textContent += text.charAt(i);
+        i++;
+        if(i >= text.length){ clearInterval(typingTimer); const c = caption.querySelector('.cursor'); if(c) c.remove(); if(typeof onDone === 'function') onDone(); }
+      }, Math.max(TYPING_MS_PER_CHAR, 1));
+    }
+
+    function clearAuto(){ clearTimeout(autoTimeout); autoTimeout = null; }
+
+    function show(i){
+      clearAuto();
+      idx = (i + pages.length) % pages.length;
+      const p = pages[idx];
+
+      const isCover   = p.type === 'cover';
+      const isGallery = p.type === 'gallery';
+
+      // Toggle visible views
+      coverEl.style.display = isCover   ? 'grid' : 'none';
+      pageEl.style.display  = (!isCover && !isGallery) ? 'grid' : 'none';
+      bookEl.style.display  = isGallery ? 'none' : 'block';
+      finalEl.style.display = isGallery ? 'block' : 'none';
+      // Ukryj rysunek „dwóch kartek” pod okładką
+      bookBG.style.display  = isCover ? 'none' : 'block';
+
+      // Progress + counter
+      bar.style.width = (((idx+1)/pages.length)*100).toFixed(2)+'%';
+      counter.textContent = `Page ${idx+1} / ${pages.length}`;
+
+      if(isCover){
+        // Animacja wejścia okładki (konieczna, by była widoczna od razu)
+        coverEl.classList.remove('ready'); void coverEl.offsetWidth; requestAnimationFrame(()=> coverEl.classList.add('ready'));
+        // Auto → po 4 s na A
+        if(isAuto){ autoTimeout = setTimeout(()=> show(1), READ_DELAY_MS); }
+        return;
+      }
+
+      if(isGallery){
+        if(!finalEl.dataset.built){ buildAquarium(); finalEl.dataset.built = '1'; }
+        isAuto = false; updateAutoBtn();
+        return;
+      }
+
+      // Normal A–Z page
+      const { letter, name } = splitTitle(p.title || '');
+      pageEl.classList.remove('ready'); void pageEl.offsetWidth;
+      img.src = p.src; img.alt = name || p.title || `Page ${idx+1}`;
+      letterEl.textContent = letter || '';
+      titleEl.textContent = name || `Page ${idx+1}`;
+      requestAnimationFrame(()=> pageEl.classList.add('ready'));
+
+      typeText(p.caption || '', ()=>{ if(isAuto){ clearAuto(); autoTimeout = setTimeout(()=> show(idx+1), READ_DELAY_MS); } });
+      updateAutoBtn();
+    }
+
+    function next(){
+      if(pages[idx]?.type === 'gallery'){ show(0); return; }
+      isAuto = false; clearAuto(); show(idx+1);
+    }
+    function prev(){
+      if(pages[idx]?.type === 'cover'){ show(pages.length-1); return; }      // z okładki w tył → galeria
+      if(pages[idx]?.type === 'gallery'){ show(pages.length-2); return; }    // z galerii w tył → Z
+      isAuto = false; clearAuto(); show(idx-1);
+    }
+
+    document.getElementById('next').addEventListener('click', next);
+    document.getElementById('prev').addEventListener('click', prev);
+    autoBtn.addEventListener('click', () => { isAuto = !isAuto; updateAutoBtn(); if(isAuto){ clearAuto(); autoTimeout = setTimeout(()=> show(idx+1), READ_DELAY_MS); } else { clearAuto(); } });
+    function updateAutoBtn(){ autoBtn.textContent = isAuto ? '⏸ Pause' : '▶ Auto'; }
+
+    document.getElementById('book').addEventListener('click', (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      (e.clientX - rect.left > rect.width/2) ? next() : prev();
+    });
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowRight') next();
+      if(e.key === 'ArrowLeft') prev();
+      if(e.key === ' ') { e.preventDefault(); isAuto = !isAuto; updateAutoBtn(); if(isAuto){ clearAuto(); autoTimeout = setTimeout(()=> show(idx+1), READ_DELAY_MS); } else { clearAuto(); } }
+    });
+
+    function buildAquarium(){
+      const letters = Array.from({length:26}, (_,i)=> String.fromCharCode(65+i));
+      const tank = document.getElementById('aquarium');
+      // Bez linków: same ikonki PNG z folderu gallery/
+      letters.forEach((L) => {
+        const cell = document.createElement('div');
+        cell.className = 'fish';
+        const img = document.createElement('img');
+        img.src = `gallery/${L}.png`;
+        img.alt = L;
+        img.onerror = () => cell.remove();
+        cell.appendChild(img);
+        tank.appendChild(cell);
+      });
+    }
+
+    // Preload A–Z images
+    azPages.forEach(p => { const im = new Image(); im.src = p.src; });
+
+    // Start on cover
+    show(0);
+  </script>
+</body>
+</html>
